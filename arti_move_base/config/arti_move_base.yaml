@@ -1,0 +1,26 @@
+network_planner:
+  type: arti_a_start_network_planner/NetworkPlannerPlugin
+
+global_planner:
+  type: arti_wrap_old_nav_core/BaseGlobalPlannerWrapper
+  #type: arti_pass_through_planner/BaseGlobalPlannerPassThrough
+  lookahead: 4.0
+BaseGlobalPlannerWrapper:
+  global_planer_name: global_planner/GlobalPlanner
+
+local_planner:
+  type: arti_wrap_old_nav_core/BaseLocalPlannerWrapper
+  #type: arti_pass_through_planner/BaseLocalPlannerPassThrough
+  lookahead: 2.0
+BaseLocalPlannerWrapper:
+  local_planer_name: teb_local_planner/TebLocalPlannerROS
+
+path_follower:
+  type: arti_stanley_control/StanleyControlPathFollower
+  #type: arti_wrap_old_nav_core/BasePathFollowerWrapper
+BasePathFollowerWrapper:
+  path_follower_name: dwa_local_planner/DWAPlannerROS
+
+ackermann_steering: false
+x_y_simple_goal_final_tolerance: 0.3
+yaw_simple_goal_final_tolerance: 0.2

@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="roadmap" default=""/>
+
+  <node pkg="arti_move_base" type="arti_move_base_node" name="arti_move_base" output="screen" clear_params="true">
+    <rosparam file="$(find arti_move_base)/config/arti_move_base.yaml" command="load"/>
+    <rosparam file="$(arg roadmap)" command="load" ns="NetworkPlannerPlugin" if="$(eval bool(arg('roadmap')))"/>
+    <rosparam file="$(find arti_move_base)/config/local_costmap.yaml" command="load"/>
+    <rosparam file="$(find arti_move_base)/config/path_follower_costmap.yaml" command="load"/>
+    <rosparam file="$(find arti_move_base)/config/global_costmap.yaml" command="load"/>
+    <rosparam file="$(find arti_move_base)/config/planner/global_planner_params.yaml" command="load"/>
+    <rosparam file="$(find arti_move_base)/config/planner/dwa_local_planner_params.yaml" command="load"/>
+    <rosparam file="$(find arti_move_base)/config/planner/teb_local_planner_params.yaml" command="load"/>
+
+    <remap from="/ukf_pose" to="/odom"/>
+  </node>
+
+</launch>

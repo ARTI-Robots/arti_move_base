@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>arti_async_utils</name>
+  <version>1.0.0</version>
+  <description>The arti_async_utils package</description>
+  <license>BSD</license>
+
+  <maintainer email="c.muehlbacher@arti-robots.com">Clemens Mühlbacher</maintainer>
+
+  <author email="c.muehlbacher@arti-robots.com">Clemens Mühlbacher</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>roscpp</build_depend>
+
+  <build_export_depend>roscpp</build_export_depend>
+
+  <exec_depend>roscpp</exec_depend>
+
+  <export>
+  </export>
+</package>

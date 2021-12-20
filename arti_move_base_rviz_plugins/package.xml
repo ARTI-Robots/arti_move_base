@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>arti_move_base_rviz_plugins</name>
+  <version>1.0.0</version>
+  <description>rviz plugins for interacting with arti_move_base</description>
+  <license>BSD</license>
+
+  <maintainer email="a.buchegger@arti-robots.com">Alexander Buchegger</maintainer>
+
+  <author email="a.buchegger@arti-robots.com">Alexander Buchegger</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>actionlib</build_depend>
+  <build_depend>arti_move_base_msgs</build_depend>
+  <build_depend>qtbase5-dev</build_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>rviz</build_depend>
+
+  <build_export_depend>actionlib</build_export_depend>
+  <build_export_depend>arti_move_base_msgs</build_export_depend>
+  <build_export_depend>roscpp</build_export_depend>
+  <build_export_depend>rviz</build_export_depend>
+
+  <exec_depend>actionlib</exec_depend>
+  <exec_depend>arti_move_base_msgs</exec_depend>
+  <exec_depend>libqt5-core</exec_depend>
+  <exec_depend>libqt5-gui</exec_depend>
+  <exec_depend>libqt5-widgets</exec_depend>
+  <exec_depend>roscpp</exec_depend>
+  <exec_depend>rviz</exec_depend>
+
+  <export>
+    <rviz plugin="${prefix}/plugin_description.xml"/>
+  </export>
+</package>

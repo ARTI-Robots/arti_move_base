@@ -1,0 +1,8 @@
+<library path="lib/libarti_move_base_rviz_plugins">
+  <class name="arti_move_base_rviz_plugins/MoveInNetworkTool" type="arti_move_base_rviz_plugins::MoveInNetworkTool"
+         base_class_type="rviz::Tool">
+    <description>
+      Tool for sending and canceling Move In Network goals.
+    </description>
+  </class>
+</library>

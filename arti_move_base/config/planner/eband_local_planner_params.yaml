@@ -1,0 +1,6 @@
+EBandPlannerROS:
+  max_vel_lin: 3.0
+  xy_goal_tolerance: 0.3  # 0.10
+  yaw_goal_tolerance: 0.1  # 0.05
+  costmap_weight: 5.0
+  eband_external_force_gain: 1.0

@@ -1,0 +1,7 @@
+# Goal:
+arti_nav_core_msgs/Movement2DStampedWithLimits target_movement
+---
+# Result:
+---
+# Feedback:
+arti_nav_core_msgs/Movement2DStampedWithLimits base_movement

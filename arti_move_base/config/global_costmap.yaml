@@ -1,0 +1,23 @@
+global_costmap:
+  plugins:
+    - {name: obstacles,         type: "arti_costmap_2d_layers::SimpleObstacleLayer"}
+    - {name: inflation,         type: "costmap_2d::InflationLayer"}
+
+  update_frequency: 10.0
+  publish_frequency: 10.0
+
+  robot_base_frame: base_link
+  global_frame: odom
+  rolling_window: true
+  width: 10.0
+  height: 10.0
+  resolution: 0.1
+
+  footprint: [[ 0.60,  0.325],
+              [-0.15,  0.325],
+              [-0.15, -0.325],
+              [ 0.60, -0.325]]
+
+  inflation:
+      inflation_radius: 2.0
+      cost_scaling_factor: 1.2
