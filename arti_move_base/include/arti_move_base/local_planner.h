@@ -18,6 +18,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include <arti_move_base/LocalPlannerConfig.h>
 #include <arti_move_base/plugin_helper.h>
 #include <arti_nav_core/base_local_planner.h>
+#include <arti_nav_core/base_local_planner_post_processing.h>
 #include <arti_nav_core/base_path_follower.h>
 #include <arti_nav_core/base_path_follower_ackermann.h>
 #include <arti_nav_core/transformer.h>
@@ -29,8 +30,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include <ros/common.h>
 #include <ros/node_handle.h>
 #include <string>
-#include <tug_profiling/profiler.h>
-#include <tug_profiling/statistics_printer.h>
+#include <arti_profiling/profiler.h>
+#include <arti_profiling/statistics_printer.h>
 
 namespace arti_move_base
 {
@@ -85,8 +86,10 @@ protected:
 
   boost::optional<GlobalPlannerResult> current_path_;
 
-  tug_profiling::Profiler profiler_;
-  tug_profiling::StatisticsPrinter statistic_printer_;
+  std::vector<PluginHelper<arti_nav_core::BaseLocalPlannerPostProcessing>> post_processing_steps_;
+
+  arti_profiling::Profiler profiler_;
+  arti_profiling::StatisticsPrinter statistic_printer_;
   bool checkTrajectoryValid(arti_nav_core_msgs::Trajectory2DWithLimits& limits);
 };
 }  // namespace arti_move_base

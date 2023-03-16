@@ -21,7 +21,8 @@ AbstractPathFollower<O, E, P>::AbstractPathFollower(
   : arti_async_utils::PeriodicPipelineStage<arti_nav_core_msgs::Trajectory2DWithLimits, O, E>(input, output, error_cbs,
                                                                                               success_cbs,
                                                                                               close_to_success_cbs,
-                                                                                              std::chrono::seconds(1)),
+                                                                                              std::chrono::seconds(1),
+                                                                                              "PathFollower"),
     planner_("arti_nav_core", base_class_name), node_handle_(node_handle), transformer_(std::move(transformer)),
     costmap_(std::move(costmap)), config_server_(node_handle_)
 {
@@ -61,7 +62,7 @@ template<class O, class E, class P>
 boost::optional<O> AbstractPathFollower<O, E, P>::performTask(
   const arti_nav_core_msgs::Trajectory2DWithLimits& input, bool new_input)
 {
-  ROS_DEBUG_STREAM_NAMED(LOGGER_NAME, "follow trajectory");
+  ROS_DEBUG_STREAM_NAMED(LOGGER_NAME, "follow trajectory ");
 
   if (!planner_)
   {

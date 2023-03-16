@@ -32,8 +32,8 @@ protected:
   PeriodicPipelineStage(
     const InputBufferPtr& input, const OutputBufferPtr& output, const ErrorCallback& error_cb,
     const SuccessCallback& success_cb, const SuccessCallback& close_to_success_cb,
-    std::chrono::duration<double> execution_duration)
-    : PipelineStage<I, O, E>(input, output, error_cb, success_cb, close_to_success_cb),
+    std::chrono::duration<double> execution_duration, const std::string& pipeline_stage_name)
+    : PipelineStage<I, O, E>(input, output, error_cb, success_cb, close_to_success_cb, pipeline_stage_name),
       execution_duration_(std::chrono::duration_cast<Clock::duration>(execution_duration))
   {
   }
@@ -41,8 +41,9 @@ protected:
   PeriodicPipelineStage(
     const InputBufferPtr& input, const OutputBufferPtr& output,
     const std::vector<ErrorCallback>& error_cbs, const std::vector<SuccessCallback>& success_cbs,
-    const std::vector<SuccessCallback>& close_to_success_cbs, std::chrono::duration<double> execution_duration)
-    : PipelineStage<I, O, E>(input, output, error_cbs, success_cbs, close_to_success_cbs),
+    const std::vector<SuccessCallback>& close_to_success_cbs, std::chrono::duration<double> execution_duration,
+    const std::string& pipeline_stage_name)
+    : PipelineStage<I, O, E>(input, output, error_cbs, success_cbs, close_to_success_cbs, pipeline_stage_name),
       execution_duration_(std::chrono::duration_cast<Clock::duration>(execution_duration))
   {
   }
@@ -59,12 +60,25 @@ protected:
   void performExecution() final
   {
     const Clock::time_point start_of_period = Clock::now();
+    ROS_DEBUG_STREAM("perfom execution");
 
+    ROS_DEBUG_STREAM("reset last input");
     last_input_.reset();
-    const std::pair<I, bool> input = this->input_->peek();
+
+    ROS_DEBUG_STREAM("touch input");
+    if (this->input_)
+    {
+      ROS_DEBUG_STREAM("input exists");
+    }
+
+    ROS_DEBUG_STREAM("peak input");
+    const std::pair<I, bool> input = this->input_->peek(this->pipeline_stage_name_);
+
+    ROS_DEBUG_STREAM("signal input change");
     last_input_ = input.first;
     this->signalInputChanged(input.first);
 
+    ROS_DEBUG_STREAM("perform task");
     const Clock::time_point start_time = Clock::now();
     const boost::optional<O> task_output = performTask(input.first, input.second);
     const Clock::time_point end_time = Clock::now();
@@ -76,6 +90,7 @@ protected:
                          << std::chrono::duration<double>(task_duration).count() << ")");
     }
 
+    ROS_DEBUG_STREAM("check to send task output");
     if (task_output)
     {
       this->output_->set(task_output.value());

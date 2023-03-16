@@ -19,7 +19,7 @@ NetworkPlanner::NetworkPlanner(
   const ros::NodeHandle& node_handle, const InputBufferPtr& input, const OutputBufferPtr& output,
   const std::vector<ErrorCallback>& error_cbs, const std::vector<SuccessCallback>& success_cbs,
   const std::vector<SuccessCallback>& close_to_success_cbs, std::shared_ptr<arti_nav_core::Transformer> transformer)
-  : EventPipelineStage(input, output, error_cbs, success_cbs, close_to_success_cbs), ErrorReceptor(0),
+  : EventPipelineStage(input, output, error_cbs, success_cbs, close_to_success_cbs, "NetworkPlanner"), ErrorReceptor(0),
     planner_("arti_nav_core", "arti_nav_core::BaseNetworkPlanner"), node_handle_(node_handle),
     transformer_(std::move(transformer)), config_server_(node_handle_)
 {
@@ -78,7 +78,7 @@ boost::optional<arti_nav_core_msgs::Movement2DGoalWithConstraints> NetworkPlanne
   result.goal.pose = input;
 
   const arti_nav_core::BaseNetworkPlanner::BaseNetworkPlannerErrorEnum planner_result
-    = planner_->makePlan(result.path_limits);
+    = planner_->makePlan(result);
   if (planner_result != arti_nav_core::BaseNetworkPlanner::BaseNetworkPlannerErrorEnum::PLAN_FOUND)
   {
     ROS_ERROR_STREAM_NAMED(LOGGER_NAME, "can't find path to " << *current_goal_);

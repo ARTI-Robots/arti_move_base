@@ -18,7 +18,7 @@ namespace arti_async_utils
 class PipelineStageBase
 {
 public:
-  PipelineStageBase() = default;
+  explicit PipelineStageBase(const std::string &pipeline_stage_name);
   explicit PipelineStageBase(const PipelineStageBase&) = delete;
   explicit PipelineStageBase(PipelineStageBase&&) = delete;
   virtual ~PipelineStageBase();
@@ -32,6 +32,8 @@ public:
 protected:
   virtual void performExecution() = 0;
   virtual void interrupt() = 0;
+
+  std::string pipeline_stage_name_;
 
 private:
   void execute();

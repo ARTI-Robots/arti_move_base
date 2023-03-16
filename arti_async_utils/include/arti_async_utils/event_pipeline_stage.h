@@ -29,17 +29,20 @@ public:
 protected:
   typedef std::chrono::system_clock Clock;
 
-  EventPipelineStage(const InputBufferPtr& input, const OutputBufferPtr& output, const ErrorCallback& error_cb,
-                     const SuccessCallback& success_cb, const SuccessCallback& close_to_success_cb)
-    : PipelineStage<I, O, E>(input, output, error_cb, success_cb, close_to_success_cb)
+  EventPipelineStage(
+    const InputBufferPtr& input, const OutputBufferPtr& output, const ErrorCallback& error_cb,
+    const SuccessCallback& success_cb, const SuccessCallback& close_to_success_cb,
+    const std::string& pipeline_stage_name)
+    : PipelineStage<I, O, E>(input, output, error_cb, success_cb, close_to_success_cb, pipeline_stage_name)
   {
   }
 
-  EventPipelineStage(const InputBufferPtr& input, const OutputBufferPtr& output,
-                     const std::vector<ErrorCallback> &error_cbs,
-                     const std::vector<SuccessCallback>& success_cbs,
-                     const std::vector<SuccessCallback>& close_to_success_cbs)
-    : PipelineStage<I, O, E>(input, output, error_cbs, success_cbs, close_to_success_cbs)
+  EventPipelineStage(
+    const InputBufferPtr& input, const OutputBufferPtr& output,
+    const std::vector<ErrorCallback>& error_cbs,
+    const std::vector<SuccessCallback>& success_cbs,
+    const std::vector<SuccessCallback>& close_to_success_cbs, const std::string& pipeline_stage_name)
+    : PipelineStage<I, O, E>(input, output, error_cbs, success_cbs, close_to_success_cbs, pipeline_stage_name)
   {
   }
 
@@ -49,7 +52,7 @@ protected:
 
   void performExecution() final
   {
-    last_input_ = this->input_->get();
+    last_input_ = this->input_->get(this->pipeline_stage_name_);
     this->signalInputChanged(last_input_);
 
     const Clock::time_point start_time = Clock::now();

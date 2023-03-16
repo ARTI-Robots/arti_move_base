@@ -27,6 +27,16 @@ MoveBaseServer::MoveBaseServer(const ros::NodeHandle& node_handle)
   move_base_action_server_.start();
 }
 
+bool MoveBaseServer::isActive()
+{
+  return move_base_action_server_.isActive();
+}
+
+void MoveBaseServer::cancleGoal()
+{
+  moveBasePreemptCB();
+}
+
 void MoveBaseServer::moveBaseSimpleGoalCB(const geometry_msgs::PoseStamped::ConstPtr& goal)
 {
   ROS_DEBUG_STREAM("received move base simple goal: " << *goal);

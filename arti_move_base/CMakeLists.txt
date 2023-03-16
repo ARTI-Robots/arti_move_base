@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   arti_nav_core
   arti_nav_core_msgs
   arti_nav_core_utils
+  arti_costmap_collision_checker
   dynamic_reconfigure
   move_base_msgs
   nav_core
@@ -21,7 +22,9 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   tf2
   tf2_geometry_msgs
-  tug_profiling
+  arti_profiling
+  arti_ros_param
+  arti_move_base_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -51,6 +54,7 @@ find_package(catkin REQUIRED COMPONENTS
 generate_dynamic_reconfigure_options(
   cfg/GlobalPlanner.cfg
   cfg/LocalPlanner.cfg
+  cfg/LocalPlannerObserver.cfg
   cfg/MoveBase.cfg
   cfg/NetworkPlanner.cfg
   cfg/PathFollower.cfg
@@ -68,7 +72,7 @@ generate_dynamic_reconfigure_options(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
-#  CATKIN_DEPENDS actionlib dynamic_reconfigure message_generation move_base_msgs nav_core pluginlib roscpp tf
+  CATKIN_DEPENDS actionlib dynamic_reconfigure move_base_msgs nav_core pluginlib roscpp tf
 #  DEPENDS system_lib
 )
 
@@ -94,6 +98,7 @@ add_library(${PROJECT_NAME}
   include/arti_move_base/global_planner_result.h
   include/arti_move_base/limit_utils.h src/limit_utils.cpp
   include/arti_move_base/local_planner.h src/local_planner.cpp
+  include/arti_move_base/local_planner_observer.h src/local_planner_observer.cpp
   include/arti_move_base/local_planner_error.h
   include/arti_move_base/move_base_server.h src/move_base_server.cpp
   include/arti_move_base/network_planner.h src/network_planner.cpp
@@ -124,8 +129,8 @@ add_executable(${PROJECT_NAME}_node
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-add_dependencies(${PROJECT_NAME} arti_nav_core_msgs_generate_messages_cpp)
-add_dependencies(${PROJECT_NAME}_node arti_nav_core_msgs_generate_messages_cpp)
+add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 

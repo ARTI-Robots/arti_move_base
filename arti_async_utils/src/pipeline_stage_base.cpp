@@ -7,6 +7,11 @@
 
 namespace arti_async_utils
 {
+PipelineStageBase::PipelineStageBase(const std::string& pipeline_stage_name)
+  : pipeline_stage_name_(pipeline_stage_name)
+{
+}
+
 PipelineStageBase::~PipelineStageBase()
 {
   stop();
@@ -43,6 +48,7 @@ void PipelineStageBase::execute()
   {
     try
     {
+      std::unique_lock<std::mutex> execution_lock(execution_mutex_);
       performExecution();
     }
     catch (const InterruptException& exception)

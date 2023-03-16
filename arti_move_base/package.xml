@@ -10,6 +10,7 @@
   <author email="a.buchegger@arti-robots.com">Alexander Buchegger</author>
   <author email="c.muehlbacher@arti-robots.com">Clemens Mühlbacher</author>
   <author email="j.steinbaeck@arti-robots.com">Josef Steinbäck</author>
+  <author email="r.hoheneder@arti-robots.com">Raphael Hoheneder</author>
 
   <buildtool_depend>catkin</buildtool_depend>
 
@@ -18,7 +19,6 @@
   <build_depend>arti_async_utils</build_depend>
   <build_depend>arti_nav_core</build_depend>
   <build_depend>dynamic_reconfigure</build_depend>
-  <build_depend>message_generation</build_depend>
   <build_depend>move_base_msgs</build_depend>
   <build_depend>nav_core</build_depend>
   <build_depend>pluginlib</build_depend>
@@ -30,7 +30,10 @@
   <build_depend>arti_nav_core_msgs</build_depend>
   <build_depend>arti_nav_core_utils</build_depend>
   <build_depend>ackermann_msgs</build_depend>
-  <build_depend>tug_profiling</build_depend>
+  <build_depend>arti_profiling</build_depend>
+  <build_depend>arti_costmap_collision_checker</build_depend>
+  <build_depend>arti_ros_param</build_depend>
+  <build_depend>arti_move_base_msgs</build_depend>
 
   <build_export_depend>actionlib</build_export_depend>
   <build_export_depend>angles</build_export_depend>
@@ -48,7 +51,10 @@
   <build_export_depend>arti_nav_core_msgs</build_export_depend>
   <build_export_depend>arti_nav_core_utils</build_export_depend>
   <build_export_depend>ackermann_msgs</build_export_depend>
-  <build_export_depend>tug_profiling</build_export_depend>
+  <build_export_depend>arti_profiling</build_export_depend>
+  <build_export_depend>arti_costmap_collision_checker</build_export_depend>
+  <build_export_depend>arti_ros_param</build_export_depend>
+  <build_export_depend>arti_move_base_msgs</build_export_depend>
 
   <exec_depend>actionlib</exec_depend>
   <exec_depend>angles</exec_depend>
@@ -66,7 +72,10 @@
   <exec_depend>arti_nav_core_msgs</exec_depend>
   <exec_depend>arti_nav_core_utils</exec_depend>
   <exec_depend>ackermann_msgs</exec_depend>
-  <exec_depend>tug_profiling</exec_depend>
+  <exec_depend>arti_profiling</exec_depend>
+  <exec_depend>arti_costmap_collision_checker</exec_depend>
+  <exec_depend>arti_ros_param</exec_depend>
+  <exec_depend>arti_move_base_msgs</exec_depend>
 
   <export>
   </export>

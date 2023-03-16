@@ -27,9 +27,12 @@ public:
   typedef std::shared_ptr<arti_async_utils::BufferedResource<O>> OutputBufferPtr;
 
   Pipeline() = default;
-  Pipeline(const InputBufferPtr &input, const OutputBufferPtr &output,
-           std::vector<std::shared_ptr<PipelineStageBase>> &&pipeline_stages)
-    : input_(input), output_(output), pipeline_stages_(pipeline_stages)
+
+  Pipeline(
+    const InputBufferPtr& input, const OutputBufferPtr& output,
+    std::vector<std::shared_ptr<PipelineStageBase>>&& pipeline_stages,
+    std::vector<std::shared_ptr<PipelineStageBase>>&& observer_stages)
+    : input_(input), output_(output), pipeline_stages_(pipeline_stages), observer_stages_(observer_stages)
   {
   }
 
@@ -83,6 +86,10 @@ public:
     {
       stage->start();
     }
+    for (const auto &stage : observer_stages_)
+    {
+      stage->start();
+    }
   }
 
   void stop()
@@ -91,11 +98,19 @@ public:
     {
       stage->stop();
     }
+    for (const auto &stage : observer_stages_)
+    {
+      stage->stop();
+    }
   }
 
   void cancel()
   {
     for (const auto &stage : pipeline_stages_)
+    {
+      stage->cancel();
+    }
+    for (const auto &stage : observer_stages_)
     {
       stage->cancel();
     }
@@ -119,6 +134,7 @@ private:
   InputBufferPtr input_;
   OutputBufferPtr output_;
   std::vector<std::shared_ptr<PipelineStageBase>> pipeline_stages_;
+  std::vector<std::shared_ptr<PipelineStageBase>> observer_stages_;
 };
 }  // namespace arti_async_utils
 

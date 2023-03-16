@@ -32,6 +32,10 @@ class MoveBaseServer
 public:
   explicit MoveBaseServer(const ros::NodeHandle& node_handle);
 
+  bool isActive();
+
+  void cancleGoal();
+
 protected:
   void moveBaseSimpleGoalCB(const geometry_msgs::PoseStamped::ConstPtr& goal);
 

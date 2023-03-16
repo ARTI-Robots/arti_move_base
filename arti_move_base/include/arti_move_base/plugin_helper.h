@@ -32,63 +32,63 @@ template<class P>
 class PluginHelper
 {
 public:
-  PluginHelper(
-    const std::string& package, const std::string& base_class)
-    : plugin_loader_(package, base_class)
+  PluginHelper(const std::string& package, const std::string& base_class)
   {
+    plugin_loader_ = std::make_shared<pluginlib::ClassLoader<P>>(package, base_class);
   }
 
   P& operator*() const noexcept
   {
-    return *plugin_;
+    return *(*plugin_);
   }
 
   P* operator->() const noexcept
   {
-    return plugin_.get();
+    return plugin_->get();
   }
 
   explicit operator bool() const noexcept
   {
-    return static_cast<bool>(plugin_);
+    return static_cast<bool>(plugin_) && static_cast<bool>(*plugin_);
   }
 
   void reset() noexcept
   {
+    plugin_->reset();
     plugin_.reset();
   }
 
   template<typename... Args>
-  void loadAndInitialize(const std::string& plugin_type, Args&&... args)
+  void loadAndInitialize(const std::string& plugin_type, Args&& ... args)
   {
     try
     {
-      plugin_ = std::move(plugin_loader_.createUniqueInstance(plugin_type));
+      plugin_ = std::make_shared<pluginlib::UniquePtr<P>>(std::move(plugin_loader_->createUniqueInstance(plugin_type)));
     }
     catch (const pluginlib::PluginlibException& ex)
     {
       throw std::invalid_argument("failed to load the '" + plugin_type + "' plugin: " + ex.what());
     }
 
-    if (!plugin_)
+    if (!plugin_ || !(*plugin_))
     {
       throw std::logic_error("got nullptr when loading the '" + plugin_type + "' plugin");
     }
 
     try
     {
-      plugin_->initialize(std::forward<Args>(args)...);
+      (*plugin_)->initialize(std::forward<Args>(args)...);
     }
     catch (const std::exception& ex)
     {
-      plugin_.reset();
+      reset();
       throw std::invalid_argument("failed to initialize the '" + plugin_type + "' plugin: " + ex.what());
     }
   }
 
 protected:
-  pluginlib::ClassLoader<P> plugin_loader_;
-  pluginlib::UniquePtr<P> plugin_;
+  std::shared_ptr<pluginlib::ClassLoader<P>> plugin_loader_;
+  std::shared_ptr<pluginlib::UniquePtr<P>> plugin_;
 };
 
 }  // namespace arti_move_base

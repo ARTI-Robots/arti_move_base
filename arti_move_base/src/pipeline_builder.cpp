@@ -53,6 +53,23 @@ void PipelineBuilder::addLocalPlanner(
     transformer, costmap));
 }
 
+//TODO : add localPlannerObserver
+void PipelineBuilder::addLocalPlannerObserver(
+  const ros::NodeHandle& node_handle, const LocalPlannerObserver::ErrorCallback& error_cb,
+  const LocalPlanner::SuccessCallback& /*success_cb*/,
+  //const LocalPlanner::SuccessCallback& /*close_to_success_cb*/,
+  const std::shared_ptr<arti_nav_core::Transformer>& transformer,
+  const std::shared_ptr<costmap_2d::Costmap2DROS>& costmap)
+{
+  observer_stages_.emplace_back(std::make_shared<LocalPlannerObserver>(
+    node_handle, getInput<LocalPlannerObserver::Input>(), getOutput<LocalPlannerObserver::Output>(),
+    makeVector({error_cb, getErrorCallback<arti_nav_core::BasePathFollower::BasePathFollowerErrorEnum,
+                LocalPlannerObserver::Input>()}),
+    makeVector<LocalPlannerObserver::SuccessCallback>({}),
+    makeVector<LocalPlannerObserver::SuccessCallback>({}),
+    transformer, costmap));
+}
+
 template<class O>
 void PipelineBuilder::addPathFollower(
   const ros::NodeHandle& node_handle, const typename PathFollower<O>::ErrorCallback& error_cb,
@@ -176,8 +193,11 @@ arti_async_utils::Pipeline<I, O> PipelineBuilder::doGetPipeline()
   std::vector<std::shared_ptr<arti_async_utils::PipelineStageBase>> stage_set = pipeline_stages_;
   pipeline_stages_.clear();
 
+  std::vector<std::shared_ptr<arti_async_utils::PipelineStageBase>> observer_set = observer_stages_;
+  observer_stages_.clear();
+
   return arti_async_utils::Pipeline<I, O>(
-    front_stage->getInput(), back_stage->getOutput(), std::move(stage_set));
+    front_stage->getInput(), back_stage->getOutput(), std::move(stage_set), std::move(observer_set));
 }
 
 template<typename T>

@@ -22,6 +22,7 @@ ArtiMoveBase::ArtiMoveBase(const ros::NodeHandle& node_handle)
   : node_handle_(node_handle), config_server_(node_handle_), transformer_(arti_nav_core_utils::createTransformer()),
     current_goal_publisher_(node_handle_.advertise<geometry_msgs::PoseStamped>("current_goal", 1)),
     clear_costmaps_server_(node_handle_.advertiseService("clear_costmaps", &ArtiMoveBase::clearCostmapsCB, this)),
+    stop_movement_server_(node_handle_.advertiseService("stop_movement", &ArtiMoveBase::stopMovementCB, this)),
     follow_target_action_server_(root_node_handle_, "follow_target", false),
     follow_trajectory_action_server_(root_node_handle_, "follow_trajectory", false),
     move_in_network_action_server_(root_node_handle_, "move_in_network", false), move_base_server_(root_node_handle_)
@@ -53,6 +54,10 @@ ArtiMoveBase::ArtiMoveBase(const ros::NodeHandle& node_handle)
                                     std::bind(&ArtiMoveBase::globalPlannerSuccessCB, this), transformer_,
                                     global_planner_costmap);
   pipeline_builder.addLocalPlanner(ros::NodeHandle(node_handle_, "local_planner"), nullptr, nullptr, transformer_,
+                                   local_planner_costmap);
+
+  pipeline_builder.addLocalPlannerObserver(ros::NodeHandle(node_handle_, "local_planner_observer"), nullptr, nullptr,
+                                          transformer_,
                                    local_planner_costmap);
 
   const ros::NodeHandle path_follower_node_handle(node_handle_, "path_follower");
@@ -116,7 +121,9 @@ void ArtiMoveBase::followTargetGoalCB()
     // This will set the input of the global planner:
     arti_nav_core_msgs::Movement2DGoalWithConstraints pipeline_goal;
     pipeline_goal.goal.pose = addLimitsIfMissing(goal->target_movement.pose);
+    pipeline_goal.goal.pose.header = goal->target_movement.pose.header;
     pipeline_goal.goal.twist = goal->target_movement.twist;
+    pipeline_goal.path_limits.header = goal->target_movement.pose.header;
     error_handled_ = false;
     planner_pipeline_->setInput(pipeline_goal);
     publishCurrentGoal(pipeline_goal.goal.pose);
@@ -185,6 +192,31 @@ bool ArtiMoveBase::clearCostmapsCB(std_srvs::Empty::Request& /*req*/, std_srvs::
   {
     costmap->resetLayers();
   }
+  return true;
+}
+
+bool ArtiMoveBase::stopMovementCB(std_srvs::Empty::Request& /*req*/, std_srvs::Empty::Response& /*resp*/)
+{
+  if (move_base_server_.isActive())
+  {
+    move_base_server_.cancleGoal();
+  }
+
+  if (follow_target_action_server_.isActive())
+  {
+    followTargetPreemptCB();
+  }
+
+  if (follow_trajectory_action_server_.isActive())
+  {
+    followTrajectoryPreemptCB();
+  }
+
+  if (move_in_network_action_server_.isActive())
+  {
+    moveInNetworkPreemptCB();
+  }
+
   return true;
 }
 

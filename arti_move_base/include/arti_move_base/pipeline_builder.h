@@ -16,6 +16,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include <arti_move_base/global_planner.h>
 #include <arti_move_base/local_planner.h>
 #include <arti_move_base/path_follower.h>
+#include <arti_move_base/local_planner_observer.h>
 #include <arti_nav_core/transformer.h>
 
 #ifdef __GNUC__
@@ -56,6 +57,13 @@ public:
     const LocalPlanner::SuccessCallback& success_cb, const std::shared_ptr<arti_nav_core::Transformer>& transformer,
     const std::shared_ptr<costmap_2d::Costmap2DROS>& costmap);
 
+  void addLocalPlannerObserver(
+    const ros::NodeHandle& node_handle, const LocalPlannerObserver::ErrorCallback& error_cb,
+    const LocalPlanner::SuccessCallback& /*success_cb*/,
+    //const LocalPlanner::SuccessCallback& /*close_to_success_cb*/,
+    const std::shared_ptr<arti_nav_core::Transformer>& transformer,
+    const std::shared_ptr<costmap_2d::Costmap2DROS>& costmap);
+
   template<class O>
   void addPathFollower(
     const ros::NodeHandle& node_handle, const typename PathFollower<O>::ErrorCallback& error_cb,
@@ -89,6 +97,7 @@ protected:
   static std::vector<T> makeVector(std::initializer_list<T> elements);
 
   std::vector<std::shared_ptr<arti_async_utils::PipelineStageBase>> pipeline_stages_;
+  std::vector<std::shared_ptr<arti_async_utils::PipelineStageBase>> observer_stages_;
 };
 
 }  // namespace arti_move_base

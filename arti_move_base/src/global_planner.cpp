@@ -21,7 +21,8 @@ GlobalPlanner::GlobalPlanner(
   const std::vector<SuccessCallback>& close_to_success_cbs,
   std::shared_ptr<arti_nav_core::Transformer> transformer,
   std::shared_ptr<costmap_2d::Costmap2DROS> costmap)
-  : EventPipelineStage(input, output, error_cbs, success_cbs, close_to_success_cbs), ErrorReceptor(0),
+  : EventPipelineStage(input, output, error_cbs, success_cbs, close_to_success_cbs, "GlobalPlanner"),
+    ErrorReceptor(0),
     planner_("arti_nav_core", "arti_nav_core::BaseGlobalPlanner"), node_handle_(node_handle),
     transformer_(std::move(transformer)), costmap_(std::move(costmap)), config_server_(node_handle_)
 {
@@ -118,7 +119,7 @@ boost::optional<GlobalPlannerResult> GlobalPlanner::performTask(
 
     double accumulated_path_length = 0.;
     auto last_pose = current_goal_->path_limits.poses.front();
-    for (const auto& pose : current_goal_->path_limits.poses)
+    for (const auto& pose: current_goal_->path_limits.poses)
     {
       accumulated_path_length += std::hypot(pose.point.x.value - last_pose.point.x.value,
                                             pose.point.y.value - last_pose.point.y.value);

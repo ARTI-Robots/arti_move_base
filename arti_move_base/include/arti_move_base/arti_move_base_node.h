@@ -65,6 +65,8 @@ private:
 
   bool clearCostmapsCB(std_srvs::Empty::Request& req, std_srvs::Empty::Response& resp);
 
+  bool stopMovementCB(std_srvs::Empty::Request& req, std_srvs::Empty::Response& resp);
+
   void networkPlannerSuccessCB();
 
   void networkPlannerErrorCB(const arti_nav_core::BaseNetworkPlanner::BaseNetworkPlannerErrorEnum& error);
@@ -93,6 +95,7 @@ private:
 
   ros::Publisher current_goal_publisher_;
   ros::ServiceServer clear_costmaps_server_;
+  ros::ServiceServer stop_movement_server_;
 
   actionlib::SimpleActionServer<arti_move_base_msgs::FollowTargetAction> follow_target_action_server_;
   actionlib::SimpleActionServer<arti_move_base_msgs::FollowTrajectoryAction> follow_trajectory_action_server_;

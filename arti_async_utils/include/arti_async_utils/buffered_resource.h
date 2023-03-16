@@ -15,6 +15,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include <condition_variable>
 #include <mutex>
 #include <utility>
+#include <ros/console.h>
+#include <set>
 
 namespace arti_async_utils
 {
@@ -41,15 +43,27 @@ public:
    *
    * May block if there is currently no resource in the buffer.
    *
+   * @param user_id id used to identify the user of the resource
+   *
    * @return a pair where the first element is the resource, and the second element is a boolean that is true if the
    *         returned resource is new (is different from the last call to peek).
    */
-  std::pair<T, bool> peek()
+  std::pair<T, bool> peek(const std::string& user_id)
   {
+    ROS_DEBUG_STREAM("peak input");
+
     std::unique_lock<std::mutex> lock(mutex_);
+    ROS_DEBUG_STREAM("have lock");
+
+    ROS_DEBUG_STREAM("wait for resource");
     waitForResource(lock);
-    std::pair<T, bool> result = std::make_pair(resource_.value(), new_resource_);
-    new_resource_ = false;
+
+    ROS_DEBUG_STREAM("make pair");
+    std::pair<T, bool> result = std::make_pair(resource_.value(),
+                                               new_resource_set_.find(user_id) == new_resource_set_.end());
+    new_resource_set_.insert(user_id);
+    ROS_DEBUG_STREAM("return result");
+
     return result;
   }
 
@@ -58,15 +72,17 @@ public:
    *
    * May block if there is currently no resource in the buffer.
    *
+   * @param user_id id used to identify the user of the resource
+   *
    * @return the stored resource.
    */
-  T get()
+  T get(const std::string& user_id)
   {
     std::unique_lock<std::mutex> lock(mutex_);
     waitForResource(lock);
     T result = resource_.value();
     resource_.reset();
-    new_resource_ = false;
+    new_resource_set_.insert(user_id);
     return result;
   }
 
@@ -75,16 +91,18 @@ public:
    *
    * Returns nothing if there is currently no resource in the buffer.
    *
+   * @param user_id id used to identify the user of the resource
+   *
    * @return the stored resource.
    */
-  boost::optional<T> tryGet()
+  boost::optional<T> tryGet(const std::string& user_id)
   {
     std::unique_lock<std::mutex> lock(mutex_);
     if (resource_)
     {
       T result = resource_.value();
       resource_.reset();
-      new_resource_ = false;
+      new_resource_set_.insert(user_id);
       return result;
     }
     return boost::none;
@@ -101,7 +119,7 @@ public:
   {
     std::lock_guard<std::mutex> lock(mutex_);
     resource_.emplace(new_resource);
-    new_resource_ = true;
+    new_resource_set_.clear();
     condition_variable_.notify_all();
   }
 
@@ -140,33 +158,41 @@ public:
   {
     std::lock_guard<std::mutex> set_lock_guard(mutex_);
     resource_.reset();
-    new_resource_ = false;
+    new_resource_set_.clear();
   }
 
-  template <class O>
+  template<class O>
   bool fitsType() const
   {
-    return std::is_convertible<O,T>::value;
+    return std::is_convertible<O, T>::value;
   }
 
 private:
   mutable std::mutex mutex_;
   std::condition_variable condition_variable_;
   boost::optional<T> resource_;
-  bool new_resource_ = false;
   bool interrupted_ = false;
+  std::set<std::string> new_resource_set_;
 
   void waitForResource(std::unique_lock<std::mutex>& lock)
   {
+    ROS_DEBUG_STREAM("wait for resource");
     while (!resource_ && !interrupted_)
     {
+      ROS_DEBUG_STREAM("no resource not interrupted wait on condition variable");
       condition_variable_.wait(lock);
+      ROS_DEBUG_STREAM("condition fired");
     }
+    ROS_DEBUG_STREAM("have either resources or where interrupted");
 
     if (interrupted_)
     {
+      ROS_DEBUG_STREAM("got interrupt throw exception");
+
       throw InterruptException();
     }
+
+    ROS_DEBUG_STREAM("got resource");
   }
 };
 }  // namespace arti_async_utils

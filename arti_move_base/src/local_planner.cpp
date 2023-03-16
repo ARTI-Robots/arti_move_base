@@ -12,9 +12,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include <arti_nav_core_utils/transformations.h>
 #include <arti_nav_core_utils/transformer.h>
 #include <ros/console.h>
-#include <tug_profiling/duration_measurement.h>
+#include <arti_profiling/duration_measurement.h>
 #include <thread>
 #include <chrono>
+#include <arti_ros_param/arti_ros_param.h>
+#include <arti_ros_param/collections.h>
 
 namespace arti_move_base
 {
@@ -25,10 +27,11 @@ LocalPlanner::LocalPlanner(
   const std::vector<ErrorCallback>& error_cbs, const std::vector<SuccessCallback>& success_cbs,
   const std::vector<SuccessCallback>& close_to_success_cbs, std::shared_ptr<arti_nav_core::Transformer> transformer,
   std::shared_ptr<costmap_2d::Costmap2DROS> costmap)
-  : EventPipelineStage(input, output, error_cbs, success_cbs, close_to_success_cbs), ErrorReceptor(0),
+  : EventPipelineStage(input, output, error_cbs, success_cbs, close_to_success_cbs, "LocalPlanner"),
+    ErrorReceptor(0),
     planner_("arti_nav_core", "arti_nav_core::BaseLocalPlanner"), node_handle_(node_handle),
     transformer_(std::move(transformer)), costmap_(std::move(costmap)), config_server_(node_handle_),
-    profiler_("local_planner"), statistic_printer_(profiler_, node_handle_)
+    profiler_("local_planner"), statistic_printer_(profiler_, ros::NodeHandle(node_handle_, "profiling"))
 {
   config_server_.setCallback(std::bind(&LocalPlanner::reconfigure, this, std::placeholders::_1));
 
@@ -44,11 +47,35 @@ LocalPlanner::LocalPlanner(
   {
     ROS_ERROR_STREAM("failed to load the local planner plugin: " << ex.what());
   }
+
+  if (node_handle_.hasParam("post_processing"))
+  {
+    std::vector<XmlRpc::XmlRpcValue> planners_raw = arti_ros_param::getRequiredParam<std::vector<XmlRpc::XmlRpcValue>>(
+      node_handle_, "post_processing");
+
+    ROS_INFO_STREAM("post processing of local planner");
+    for (const auto& planner_info_raw: planners_raw)
+    {
+      std::string plugin_type = arti_ros_param::getRequiredParam<std::string>(planner_info_raw, "plugin_type");
+      std::string plugin_name = arti_ros_param::getRequiredParam<std::string>(planner_info_raw, "plugin_name");
+
+      const ros::NodeHandle post_processing_node_handle{node_handle_, plugin_name};
+
+      ROS_INFO_STREAM("plugin_type: " << plugin_type << " plugin_name: " << plugin_name);
+
+      post_processing_steps_.emplace_back("arti_nav_core", "arti_nav_core::BaseLocalPlannerPostProcessing");
+      post_processing_steps_.back().loadAndInitialize(plugin_type,
+                                                      utils::getRelativeNamespace(post_processing_node_handle),
+                                                      transformer_.get(),
+                                                      costmap_.get());
+    }
+  }
 }
 
 void LocalPlanner::cancel()
 {
   current_path_.reset();
+  planner_->resetPlanner();
   EventPipelineStage::cancel();
 }
 
@@ -64,7 +91,7 @@ boost::optional<arti_nav_core_msgs::Trajectory2DWithLimits> LocalPlanner::perfor
 {
   //ROS_ERROR_STREAM("LocalPlanner::performTask::input: " << input.plan);
 
-  tug_profiling::DurationMeasurement measurement(profiler_, "complete function");
+  arti_profiling::DurationMeasurement measurement(profiler_, "complete function");
 
   std::unique_lock<costmap_2d::Costmap2D::mutex_t> costmap_lock(*costmap_->getCostmap()->getMutex());
 
@@ -105,7 +132,7 @@ boost::optional<arti_nav_core_msgs::Trajectory2DWithLimits> LocalPlanner::perfor
 
   double accumulated_path_length = 0.;
   auto last_pose = current_path_->plan.poses.front();
-  for (const auto& pose : current_path_->plan.poses)
+  for (const auto& pose: current_path_->plan.poses)
   {
     accumulated_path_length += std::hypot(pose.point.x.value - last_pose.point.x.value,
                                           pose.point.y.value - last_pose.point.y.value);
@@ -164,11 +191,10 @@ boost::optional<arti_nav_core_msgs::Trajectory2DWithLimits> LocalPlanner::perfor
   }
 
   arti_nav_core_msgs::Trajectory2DWithLimits trajectory;
-  tug_profiling::DurationMeasurement measurement_makeTrajectory(profiler_, "makeTrajectory");
+  arti_profiling::DurationMeasurement measurement_makeTrajectory(profiler_, "makeTrajectory");
   const arti_nav_core::BaseLocalPlanner::BaseLocalPlannerErrorEnum planner_result
     = planner_->makeTrajectory(trajectory);
   measurement_makeTrajectory.stop();
-
 
   ROS_DEBUG_STREAM_NAMED(LOGGER_NAME, "local planner trajectory: " << trajectory);
 
@@ -194,14 +220,54 @@ boost::optional<arti_nav_core_msgs::Trajectory2DWithLimits> LocalPlanner::perfor
     return boost::none;
   }
 
-  tug_profiling::DurationMeasurement measurement_transformTrajectory(profiler_, "transformTrajectory");
+  for (const auto& post_processing_step: post_processing_steps_)
+  {
+    arti_nav_core_msgs::Trajectory2DWithLimits new_trajectory;
+    arti_nav_core::BaseLocalPlannerPostProcessing::BaseLocalPlannerPostProcessingErrorEnum post_processing_result = post_processing_step->makeTrajectory(
+      trajectory, current_planner_input.final_twist, new_trajectory);
+
+    if (post_processing_result
+        != arti_nav_core::BaseLocalPlannerPostProcessing::BaseLocalPlannerPostProcessingErrorEnum::TRAJECTORY_POST_PROCESSED)
+    {
+      ROS_ERROR_STREAM_NAMED(LOGGER_NAME, "local planner post processing cannot produce a trajectory");
+      LocalPlannerError planner_error;
+      planner_error.error_pose_a = current_planner_input.plan.poses.front();
+      planner_error.error_pose_b = current_planner_input.plan.poses.back();
+      switch (post_processing_result)
+      {
+        case arti_nav_core::BaseLocalPlannerPostProcessing::BaseLocalPlannerPostProcessingErrorEnum::FAR_FROM_PATH:
+          planner_error.error_enum = arti_nav_core::BaseLocalPlanner::BaseLocalPlannerErrorEnum::FAR_FROM_PATH;
+          break;
+        case arti_nav_core::BaseLocalPlannerPostProcessing::BaseLocalPlannerPostProcessingErrorEnum::OBSTACLE_TO_CLOSE:
+          planner_error.error_enum = arti_nav_core::BaseLocalPlanner::BaseLocalPlannerErrorEnum::OBSTACLE_TO_CLOSE;
+          break;
+        case arti_nav_core::BaseLocalPlannerPostProcessing::BaseLocalPlannerPostProcessingErrorEnum::POST_PROCESSING_NOT_POSSIBLE:
+          planner_error.error_enum = arti_nav_core::BaseLocalPlanner::BaseLocalPlannerErrorEnum::NO_TRAJECTORY_POSSIBLE;
+          break;
+        case arti_nav_core::BaseLocalPlannerPostProcessing::BaseLocalPlannerPostProcessingErrorEnum::TRAJECTORY_POST_PROCESSED:
+          //nothing to do as this would be the good case
+          break;
+      }
+      planner_error.error_enum = planner_result;
+
+      ROS_WARN_STREAM_NAMED(LOGGER_NAME, "sleep for " << config_.delay_s_after_invalid_trajectory << " s.");
+      std::this_thread::sleep_for(std::chrono::duration<double>(config_.delay_s_after_invalid_trajectory));
+
+      callErrorCB(planner_error);
+      return boost::none;
+    }
+
+    trajectory = new_trajectory;
+  }
+
+  arti_profiling::DurationMeasurement measurement_transformTrajectory(profiler_, "transformTrajectory");
   boost::optional<arti_nav_core_msgs::Trajectory2DWithLimits> result = transformTrajectory(trajectory);
   measurement_transformTrajectory.stop();
   if (result)
   {
     ROS_DEBUG_STREAM_NAMED(LOGGER_NAME, "local planner transformed trajectory: " << *result);
   }
-  
+
   // CHECK VALIDITY OF LOCAL PLANNER'S TRAJECTORY
   // Return - no trajectory possible if teb planner produces an invalid trajectory
   if (config_.enable_trajectory_validation && !checkTrajectoryValid(trajectory))
@@ -446,7 +512,7 @@ boost::optional<arti_nav_core_msgs::Trajectory2DWithLimits> LocalPlanner::transf
 
   ROS_DEBUG_STREAM_NAMED(LOGGER_NAME, "LocalPlanner::transformTrajectory: stamp: " << stamp);
 
-  tug_profiling::DurationMeasurement measurement_getTransform(profiler_, "getTransform");
+  arti_profiling::DurationMeasurement measurement_getTransform(profiler_, "getTransform");
   std::string error_message;
   const boost::optional<geometry_msgs::TransformStamped> transform_msg
     = arti_nav_core_utils::tryToLookupTransform(*transformer_, frame_id, trajectory.header.frame_id, stamp,
@@ -463,7 +529,7 @@ boost::optional<arti_nav_core_msgs::Trajectory2DWithLimits> LocalPlanner::transf
   }
   measurement_getTransform.stop();
 
-  tug_profiling::DurationMeasurement measurement_transformMovement(profiler_, "transformMovement");
+  arti_profiling::DurationMeasurement measurement_transformMovement(profiler_, "transformMovement");
   const arti_nav_core_msgs::Trajectory2DWithLimits result
     = arti_nav_core_utils::transformTrajectory(trajectory, *transform_msg);
   measurement_transformMovement.stop();
@@ -516,7 +582,7 @@ boost::optional<GlobalPlannerResult> LocalPlanner::transformGlobalPlannerResult(
 
 bool LocalPlanner::checkTrajectoryValid(arti_nav_core_msgs::Trajectory2DWithLimits& limits)
 {
-  if(limits.movements.empty())
+  if (limits.movements.empty())
   {
     return false; // empty trajectory
   }
@@ -527,14 +593,15 @@ bool LocalPlanner::checkTrajectoryValid(arti_nav_core_msgs::Trajectory2DWithLimi
   arti_nav_core_msgs::Point2DWithLimits last_point = limits.movements.front().pose.point;
   double dist_accumulated = 0.;
 
-  for (const auto& idx_pose : limits.movements)
+  for (const auto& idx_pose: limits.movements)
   {
-    angle_accumulated += idx_pose.pose.theta.value -last_theta;
-    double delta_dist = std::hypot(idx_pose.pose.point.x.value - last_point.x.value, idx_pose.pose.point.y.value - last_point.y.value);
+    angle_accumulated += idx_pose.pose.theta.value - last_theta;
+    double delta_dist = std::hypot(idx_pose.pose.point.x.value - last_point.x.value,
+                                   idx_pose.pose.point.y.value - last_point.y.value);
 
     dist_accumulated += delta_dist;
 
-    if(delta_dist > config_.max_dist_between_planner_poses)
+    if (delta_dist > config_.max_dist_between_planner_poses)
     {
       ROS_WARN_STREAM("Too big gaps within trajectory poses (" << delta_dist << " m)");
       return false;
@@ -547,15 +614,17 @@ bool LocalPlanner::checkTrajectoryValid(arti_nav_core_msgs::Trajectory2DWithLimi
 
   if (angle_accumulated > config_.max_accumulated_angle)
   {
-    ROS_WARN_STREAM("Trajectory from TEB is not valid - accumulated angle too big (" << angle_accumulated << ")");
+    planner_->resetPlanner();
+    ROS_WARN_STREAM("Trajectory is not valid - accumulated angle too big (" << angle_accumulated << ")");
     return false;
   }
 
   if (dist_accumulated > config_.max_accumulated_distance)
   {
-
-    ROS_WARN_STREAM("Trajectory from TEB is not valid - accumulated distance too big (" << dist_accumulated
-    << "), limits.movements.size() = " << limits.movements.size());
+    planner_->resetPlanner();
+    ROS_WARN_STREAM("Trajectory is not valid - accumulated distance too big (" << dist_accumulated
+                                                                               << "), limits.movements.size() = "
+                                                                               << limits.movements.size());
     return false;
   }
 

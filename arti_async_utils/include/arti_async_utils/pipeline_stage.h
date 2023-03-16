@@ -67,6 +67,7 @@ protected:
 
   void signalInputChanged(const I& input)
   {
+    ROS_DEBUG_STREAM_NAMED("Pipeline_stage:", "input changed callback");
     detail::callCallback(input_changed_cb_, input);
   }
 
@@ -91,6 +92,7 @@ public:
 
   void setOutputChangedCB(const OutputChangedCallback& output_changed_cb)
   {
+    ROS_DEBUG_STREAM_NAMED("Pipeline_stage:", "Output changed callback");
     output_changed_cb_ = output_changed_cb;
   }
 
@@ -137,17 +139,19 @@ public:
 protected:
   PipelineStage(
     const InputBufferPtr& input, const OutputBufferPtr& output, const ErrorCallback& error_cb,
-    const SuccessCallback& success_cb, const SuccessCallback& close_to_success_cb)
+    const SuccessCallback& success_cb, const SuccessCallback& close_to_success_cb,
+    const std::string& pipeline_stage_name)
     : PipelineStage<I, O, E>(input, output, createVectorIfValid(error_cb), createVectorIfValid(success_cb),
-                             createVectorIfValid(close_to_success_cb))
+                             createVectorIfValid(close_to_success_cb), pipeline_stage_name)
   {
   }
 
   PipelineStage(
     const InputBufferPtr& input, const OutputBufferPtr& output, const std::vector<ErrorCallback>& error_cbs,
-    const std::vector<SuccessCallback>& success_cbs, const std::vector<SuccessCallback>& close_to_success_cbs)
-    : PipelineInputStage<I>(input), PipelineOutputStage<O>(output), error_cbs_(error_cbs), success_cbs_(success_cbs),
-      close_to_success_cbs_(close_to_success_cbs)
+    const std::vector<SuccessCallback>& success_cbs, const std::vector<SuccessCallback>& close_to_success_cbs,
+    const std::string& pipeline_stage_name)
+    : PipelineStageBase(pipeline_stage_name), PipelineInputStage<I>(input), PipelineOutputStage<O>(output),
+      error_cbs_(error_cbs), success_cbs_(success_cbs), close_to_success_cbs_(close_to_success_cbs)
   {
   }
 
@@ -162,7 +166,7 @@ protected:
     const boost::optional<I> input = this->getLastInput();
     this->input_->clear();
     this->output_->clear();
-    for (const auto& cb : success_cbs_)
+    for (const auto& cb: success_cbs_)
     {
       detail::callCallback(cb, input);
     }
@@ -171,7 +175,7 @@ protected:
   void callCloseToSuccessCB()
   {
     const boost::optional<I> input = this->getLastInput();
-    for (const auto& cb : close_to_success_cbs_)
+    for (const auto& cb: close_to_success_cbs_)
     {
       detail::callCallback(cb, input);
     }
@@ -182,7 +186,7 @@ protected:
     const boost::optional<I> input = this->getLastInput();
     this->input_->clear();
     this->output_->clear();
-    for (const auto& cb : error_cbs_)
+    for (const auto& cb: error_cbs_)
     {
       detail::callCallback(cb, error, input);
     }
