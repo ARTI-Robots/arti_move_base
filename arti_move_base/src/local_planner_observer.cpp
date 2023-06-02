@@ -130,14 +130,41 @@ boost::optional<bool> LocalPlannerObserver::performTask(
 
       if(last_obstacle_)
       {
-        obstacle_marker.header.seq = last_obstacle_->header.seq +1;
+        obstacle_marker.header.seq = last_obstacle_->header.seq +2;
       }
       else
       {
         obstacle_marker.header.seq = 1;
       }
+      const boost::optional<geometry_msgs::PoseStamped> robot_pose = utils::getRobotPose(*costmap_);
+      if (!robot_pose)
+      {
+        ROS_ERROR_STREAM("can not get robot pose from costmap for collision checking");
+        return false;
+      }
+      visualization_msgs::Marker robot_marker;
+      robot_marker.ns = "obstacle_in_path";
+      robot_marker.id = 1;
+      robot_marker.action = visualization_msgs::Marker::ADD;
+      robot_marker.type = visualization_msgs::Marker::SPHERE;
+      robot_marker.header.frame_id = robot_pose->header.frame_id;
+      robot_marker.header.stamp = ros::Time::now();
+      robot_marker.header.seq = obstacle_marker.header.seq+1;
+      robot_marker.color.r = 0.0;
+      robot_marker.color.g = 0.0;
+      robot_marker.color.b = 1.0;
+      robot_marker.color.a = 1.0;
+      robot_marker.pose.orientation.w = 1.;
+      robot_marker.scale.x = 1.1;
+      robot_marker.scale.y = 1.1;
+      robot_marker.scale.z = 1.1;
+      robot_marker.pose.position.x = robot_pose->pose.position.x;
+      robot_marker.pose.position.y = robot_pose->pose.position.y;
+      robot_marker.pose.position.z = 0.5;
+
       last_obstacle_.reset(obstacle_marker);
       pub_obstacle_.publish(obstacle_marker);
+      pub_obstacle_.publish(robot_marker);
       this->callErrorCB(arti_nav_core::BasePathFollower::BasePathFollowerErrorEnum::OBSTACLE_CLOSE);
       return false;
     }
@@ -162,3 +189,4 @@ double LocalPlannerObserver::getDistance(
 }
 
 }
+
