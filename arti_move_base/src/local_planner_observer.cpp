@@ -32,6 +32,7 @@ LocalPlannerObserver::LocalPlannerObserver(
   costmap_collision_checker_.reset(new arti_costmap_collision_checker::CostmapCollisionCheck(node_handle_,
                                                                                              costmap_.get()));
 
+  pub_obstacle_ = node_handle_.advertise<visualization_msgs::Marker>("last_obstacle", 10, true);
   ROS_INFO_STREAM("Local Plan Observer loaded");
 }
 
@@ -104,8 +105,45 @@ boost::optional<bool> LocalPlannerObserver::performTask(
     if (costmap_collision_checker_->isInCollision(input.movements[i]))
     {
       ROS_ERROR_STREAM_NAMED(LOGGER_NAME, "Trajectory blocked, cancel trajectory");
+
+      ROS_ERROR_NAMED(LOGGER_NAME, "pose of obstacle: x:[%f] y:[%f], frame  [%s]", input.movements[i].pose.point.x
+      .value, input.movements[i].pose.point.y.value, input.header.frame_id.c_str());
+
+      visualization_msgs::Marker obstacle_marker;
+      obstacle_marker.ns = "obstacle_in_path";
+      obstacle_marker.id = 0;
+      obstacle_marker.action = visualization_msgs::Marker::ADD;
+      obstacle_marker.type = visualization_msgs::Marker::SPHERE;
+      obstacle_marker.header.frame_id = input.header.frame_id;
+      obstacle_marker.header.stamp = ros::Time::now();
+      obstacle_marker.color.r = 1;
+      obstacle_marker.color.g = 0.0;
+      obstacle_marker.color.b = 0.0;
+      obstacle_marker.color.a = 0.75;
+      obstacle_marker.pose.orientation.w = 1.;
+      obstacle_marker.scale.x = 1.1;
+      obstacle_marker.scale.y = 1.1;
+      obstacle_marker.scale.z = 1.1;
+      obstacle_marker.pose.position.x = input.movements[i].pose.point.x.value;
+      obstacle_marker.pose.position.y = input.movements[i].pose.point.y.value;
+      obstacle_marker.pose.position.z = 0.5;
+
+      if(last_obstacle_)
+      {
+        obstacle_marker.header.seq = last_obstacle_->header.seq +1;
+      }
+      else
+      {
+        obstacle_marker.header.seq = 1;
+      }
+      last_obstacle_.reset(obstacle_marker);
+      pub_obstacle_.publish(obstacle_marker);
       this->callErrorCB(arti_nav_core::BasePathFollower::BasePathFollowerErrorEnum::OBSTACLE_CLOSE);
       return false;
+    }
+    if(last_obstacle_)
+    {
+      pub_obstacle_.publish(last_obstacle_.get());
     }
   }
 

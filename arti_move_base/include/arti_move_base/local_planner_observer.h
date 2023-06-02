@@ -64,6 +64,9 @@ protected:
 
   boost::optional<arti_nav_core_msgs::Trajectory2DWithLimits> current_trajectory_;
 
+  ros::Publisher pub_obstacle_;
+  boost::optional<visualization_msgs::Marker> last_obstacle_;
+
   size_t current_input_index_ = 0;
 };
 
