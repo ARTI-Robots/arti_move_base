@@ -60,6 +60,7 @@ boost::optional<bool> LocalPlannerObserver::performTask(
 
   if (new_input)
   {
+    ROS_INFO("New Input, reset current_input_index_");
     current_input_index_ = 0;
   }
   else
@@ -77,22 +78,23 @@ boost::optional<bool> LocalPlannerObserver::performTask(
     for (size_t i = current_input_index_; i < input.movements.size(); ++i)
     {
       const double distance = getDistance(*robot_pose, input.movements[i]);
-      if (distance > config_.passing_distance)
+/*      if (distance > config_.passing_distance)
       {
         break;
-      }
+      }*/
 
       if (distance < min_distance)
       {
         min_distance = distance;
+        new_current_input_index = i;
       }
       else
       {
         //we stop removing points if we reached the minimum distance as this should be the current point
-        break;
+        //break;
       }
 
-      new_current_input_index = i;
+      //new_current_input_index = i;
     }
 
     current_input_index_ = new_current_input_index;
@@ -104,7 +106,8 @@ boost::optional<bool> LocalPlannerObserver::performTask(
   {
     if (costmap_collision_checker_->isInCollision(input.movements[i]))
     {
-      ROS_ERROR_STREAM_NAMED(LOGGER_NAME, "Trajectory blocked, cancel trajectory");
+      ROS_ERROR_STREAM_NAMED(LOGGER_NAME, "Trajectory blocked, cancel trajectory - path index ["<<
+      current_input_index_<<"]");
 
       ROS_ERROR_NAMED(LOGGER_NAME, "pose of obstacle: x:[%f] y:[%f], frame  [%s]", input.movements[i].pose.point.x
       .value, input.movements[i].pose.point.y.value, input.header.frame_id.c_str());
