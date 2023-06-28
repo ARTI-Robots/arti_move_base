@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib_msgs
   arti_nav_core_msgs
   geometry_msgs
+  nav_msgs
   message_generation
   message_runtime
 )
@@ -57,6 +58,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_service_files(
   FILES
   ChangeRegion.srv
+  GetNetworkPlan.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -72,6 +74,7 @@ generate_messages(
   DEPENDENCIES
   actionlib_msgs
   arti_nav_core_msgs
+  nav_msgs
 )
 
 ################################################
