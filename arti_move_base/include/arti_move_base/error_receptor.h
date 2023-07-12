@@ -30,6 +30,7 @@ public:
 
   void closeToSuccessCB(const boost::optional<I>& input)
   {
+    error_count_ = 0;
     handleCloseToSuccess(input);
   }
 
@@ -60,7 +61,9 @@ protected:
     if (error_count_ >= error_propagation_count_)
     {
       propagationError();
-      error_count_ = error_propagation_count_;
+      
+      error_count_ = 0;
+      //error_count_ = error_propagation_count_;
       return true;
     }
     return false;
